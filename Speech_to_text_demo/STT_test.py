@@ -3,10 +3,17 @@ import torchaudio
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 
 def load_audio(file_path):
-    waveform, sample_rate = torchaudio.load(file_path)
-    return waveform, sample_rate
+    try:
+        waveform, sample_rate = torchaudio.load(file_path)
+        return waveform, sample_rate
+    except RuntimeError as e:
+        print(f"Error loading audio file: {e}")
+        return None, None
 
 def transcribe_audio(waveform, sample_rate, model, processor):
+    if waveform is None or sample_rate is None:
+        return "Error in loading audio file."
+
     # Resample the audio to 16kHz if necessary
     if sample_rate != 16000:
         resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=16000)
