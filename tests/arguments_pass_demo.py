@@ -38,3 +38,5 @@ def main():
 if __name__ == "__main__":
     main()
     # nie wiem co to schodzi
+    # przechodzimy proces jeszcze raz
+    
