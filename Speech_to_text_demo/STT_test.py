@@ -39,7 +39,7 @@ def main():
     processor = Wav2Vec2Processor.from_pretrained(model_name)
     
     # Load the audio file
-    file_path = "C:/Users/Krolik/Desktop/beznazwy.wav"
+    file_path = "filepath"
     waveform, sample_rate = load_audio(file_path)
     
     # Transcribe the audio
