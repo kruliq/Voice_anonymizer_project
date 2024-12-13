@@ -37,4 +37,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # chuja wiem co to schodzi
+    # nie wiem co to schodzi
