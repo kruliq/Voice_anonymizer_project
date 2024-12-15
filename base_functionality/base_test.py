@@ -1,7 +1,7 @@
 import torchaudio
-from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor, pipeline
+from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor, VitsModel, AutoTokenizer
 import torch
-import soundfile as sf
+from scipy.io.wavfile import write as wav_write
 from datasets import load_dataset
 
 def load_audio(file_path):
@@ -34,9 +34,13 @@ def transcribe_audio(waveform, sample_rate, model, processor, device):
     
     return transcription[0]
 
-def synthesize_speech(text, synthesiser, speaker_embedding, output_path):
-    speech = synthesiser(text, forward_params={"speaker_embeddings": speaker_embedding})
-    sf.write(output_path, speech["audio"], samplerate=speech["sampling_rate"])
+def synthesize_speech(text, model, tokenizer, output_path, device):
+    inputs = tokenizer(text, return_tensors="pt").to(device)
+    with torch.no_grad():
+        output = model(**inputs).waveform.to(device)
+    
+    # Save the synthesized speech to a WAV file
+    wav_write(output_path, rate=model.config.sampling_rate, data=output.squeeze().cpu().numpy())
 
 def main():
     # Check if GPU is available
@@ -52,8 +56,10 @@ def main():
     embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
     speaker_embedding = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0).to(device)
 
-    # Initialize the text-to-speech pipeline
-    synthesiser = pipeline("text-to-speech", model="microsoft/speecht5_tts", device=device.index if device.type == "cuda" else -1)
+    # Load the TTS model and tokenizer
+    tts_model_name = "facebook/mms-tts-pol"
+    tts_model = VitsModel.from_pretrained(tts_model_name).to(device)
+    tts_tokenizer = AutoTokenizer.from_pretrained(tts_model_name)
     
     # Load the audio file
     input_file_path = "C:/Users/Krolik/Desktop/test_pl.wav"
@@ -68,7 +74,7 @@ def main():
     print(f"Transcription: {transcription}")
     
     # Synthesize the anonymized speech
-    synthesize_speech(transcription, synthesiser, speaker_embedding, output_file_path)
+    synthesize_speech(transcription, tts_model, tts_tokenizer, output_file_path, device)
     print(f"Anonymized speech saved to {output_file_path}")
 
 if __name__ == "__main__":
