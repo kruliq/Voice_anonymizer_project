@@ -3,6 +3,7 @@ from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor, SpeechT5ForTextToSpe
 import torch
 import soundfile as sf
 from datasets import load_dataset
+import numpy as np
 
 def load_audio(file_path):
     try:
@@ -34,13 +35,21 @@ def transcribe_audio(waveform, sample_rate, model, processor):
     
     return transcription[0]
 
-def synthesize_speech(text, tts_model, tts_processor, output_path, embeddings):
+def synthesize_speech(text, tts_model, tts_processor, output_path, embeddings, original_duration):
     inputs = tts_processor(text=text, return_tensors="pt")
     with torch.no_grad():
         speech = tts_model.generate_speech(inputs["input_ids"], speaker_embeddings=embeddings)
     
+    # Calculate the resample factor
+    synthesized_duration = speech.shape[-1] / 22050  # Assuming the TTS model outputs at 22050 Hz
+    resample_factor = original_duration / synthesized_duration
+    new_freq = int(22050 * resample_factor)
+    
+    # Resample the synthesized speech to match the original duration
+    resampled_speech = torchaudio.functional.resample(speech.squeeze().cpu(), orig_freq=22050, new_freq=new_freq)
+    
     # Save the synthesized speech to a WAV file
-    sf.write(output_path, speech.squeeze().cpu().numpy(), 22050)
+    sf.write(output_path, resampled_speech.numpy(), new_freq)
 
 def main():
     # Load the pre-trained models and processors
@@ -57,16 +66,19 @@ def main():
     tts_processor = SpeechT5Processor.from_pretrained(tts_model_name)
     
     # Load the audio file
-    input_file_path = "C:/Users/Krolik/Desktop/beznazwy.wav"
+    input_file_path = "C:/Users/Krolik/Desktop/test_pl.wav"
     output_file_path = "C:/Users/Krolik/Desktop/anon.wav"
     waveform, sample_rate = load_audio(input_file_path)
+    
+    # Get the original duration of the audio
+    original_duration = waveform.shape[-1] / sample_rate
     
     # Transcribe the audio
     transcription = transcribe_audio(waveform, sample_rate, stt_model, stt_processor)
     print(f"Transcription: {transcription}")
     
     # Synthesize the anonymized speech
-    synthesize_speech(transcription, tts_model, tts_processor, output_file_path, speaker_embeddings)
+    synthesize_speech(transcription, tts_model, tts_processor, output_file_path, speaker_embeddings, original_duration)
     print(f"Anonymized speech saved to {output_file_path}")
 
 if __name__ == "__main__":
