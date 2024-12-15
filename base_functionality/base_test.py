@@ -1,9 +1,8 @@
 import torchaudio
-from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor, SpeechT5ForTextToSpeech, SpeechT5Processor
+from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor, pipeline
 import torch
-from scipy.io.wavfile import write as wav_write
+import soundfile as sf
 from datasets import load_dataset
-import numpy as np
 
 def load_audio(file_path):
     try:
@@ -35,16 +34,9 @@ def transcribe_audio(waveform, sample_rate, model, processor, device):
     
     return transcription[0]
 
-def synthesize_speech(text, tts_model, tts_processor, output_path, embeddings, device):
-    inputs = tts_processor(text=text, return_tensors="pt").to(device)
-    with torch.no_grad():
-        speech = tts_model.generate_speech(inputs["input_ids"], speaker_embeddings=embeddings.to(device))
-    
-    # Convert the speech tensor to numpy array and ensure it is in the correct format
-    speech_np = speech.squeeze().cpu().numpy()
-    
-    # Save the synthesized speech to a WAV file with the correct sample rate
-    wav_write(output_path, 22050, speech_np.astype('int16'))
+def synthesize_speech(text, synthesiser, speaker_embedding, output_path):
+    speech = synthesiser(text, forward_params={"speaker_embeddings": speaker_embedding})
+    sf.write(output_path, speech["audio"], samplerate=speech["sampling_rate"])
 
 def main():
     # Check if GPU is available
@@ -56,13 +48,12 @@ def main():
     stt_model = Wav2Vec2ForCTC.from_pretrained(stt_model_name).to(device)
     stt_processor = Wav2Vec2Processor.from_pretrained(stt_model_name)
     
+    # Load the embeddings dataset
     embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
-    speaker_embeddings = embeddings_dataset[7306]["xvector"]
-    speaker_embeddings = torch.tensor(speaker_embeddings).unsqueeze(0)
+    speaker_embedding = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0).to(device)
 
-    tts_model_name = "microsoft/speecht5_tts"
-    tts_model = SpeechT5ForTextToSpeech.from_pretrained(tts_model_name).to(device)
-    tts_processor = SpeechT5Processor.from_pretrained(tts_model_name)
+    # Initialize the text-to-speech pipeline
+    synthesiser = pipeline("text-to-speech", model="microsoft/speecht5_tts", device=device.index if device.type == "cuda" else -1)
     
     # Load the audio file
     input_file_path = "C:/Users/Krolik/Desktop/test_pl.wav"
@@ -77,7 +68,7 @@ def main():
     print(f"Transcription: {transcription}")
     
     # Synthesize the anonymized speech
-    synthesize_speech(transcription, tts_model, tts_processor, output_file_path, speaker_embeddings, device)
+    synthesize_speech(transcription, synthesiser, speaker_embedding, output_file_path)
     print(f"Anonymized speech saved to {output_file_path}")
 
 if __name__ == "__main__":
