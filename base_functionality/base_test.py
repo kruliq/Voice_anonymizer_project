@@ -1,8 +1,15 @@
+import os
 import torchaudio
-from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor, VitsModel, AutoTokenizer
 import torch
+import numpy as np
+from transformers import (
+    Wav2Vec2ForCTC, 
+    Wav2Vec2Processor, 
+    SpeechT5ForTextToSpeech, 
+    SpeechT5Processor
+)
 from scipy.io.wavfile import write as wav_write
-from datasets import load_dataset
+from torchaudio.pipelines import WAV2VEC2_ASR_BASE_960H
 
 def load_audio(file_path):
     try:
@@ -12,69 +19,102 @@ def load_audio(file_path):
         print(f"Error loading audio file: {e}")
         return None, None
 
+def extract_speaker_embeddings(waveform, sample_rate, device):
+    try:
+        bundle = WAV2VEC2_ASR_BASE_960H
+        model = bundle.get_model().to(device)
+        
+        if sample_rate != bundle.sample_rate:
+            resampler = torchaudio.transforms.Resample(
+                orig_freq=sample_rate, 
+                new_freq=bundle.sample_rate
+            )
+            waveform = resampler(waveform)
+        
+        with torch.no_grad():
+            features, _ = model.extract_features(waveform.to(device))
+            # Reshape embeddings to match SpeechT5 requirements
+            embeddings = features[-1].mean(dim=1)  # [batch_size, hidden_size]
+            
+            # Create fixed projection matrix
+            projection_matrix = torch.nn.Parameter(
+                torch.randn(1280, 768, device=device) / np.sqrt(1280)
+            )
+            
+            # Project from 1x1280 to 1x768
+            embeddings = torch.matmul(embeddings, projection_matrix)
+            
+            print(f"Embedding shape: {embeddings.shape}")  # Debug info
+            return embeddings
+
+    except Exception as e:
+        print(f"Error extracting speaker embeddings: {e}")
+        return None
+
 def transcribe_audio(waveform, sample_rate, model, processor, device):
     if waveform is None or sample_rate is None:
         return "Error in loading audio file."
 
-    # Resample the audio to 16kHz if necessary
+    # Resample if necessary
     if sample_rate != 16000:
         resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=16000)
         waveform = resampler(waveform)
     
-    # Process the audio
+    # Process audio
     input_values = processor(waveform.squeeze(), sampling_rate=16000, return_tensors="pt").input_values.to(device)
     
     # Perform inference
     with torch.no_grad():
         logits = model(input_values).logits
-    
-    # Decode the logits
-    predicted_ids = torch.argmax(logits, dim=-1)
-    transcription = processor.batch_decode(predicted_ids)
+        predicted_ids = torch.argmax(logits, dim=-1)
+        transcription = processor.batch_decode(predicted_ids)
     
     return transcription[0]
 
-def synthesize_speech(text, model, tokenizer, output_path, device):
-    inputs = tokenizer(text, return_tensors="pt").to(device)
-    with torch.no_grad():
-        output = model(**inputs).waveform.to(device)
+def synthesize_speech(text, model, processor, output_path, speaker_embeddings, device):
+    inputs = processor(text=text, return_tensors="pt").to(device)
     
-    # Save the synthesized speech to a WAV file
-    wav_write(output_path, rate=model.config.sampling_rate, data=output.squeeze().cpu().numpy())
+    with torch.no_grad():
+        output = model.generate_speech(
+            inputs["input_ids"],
+            speaker_embeddings=speaker_embeddings
+        )
+    
+    audio_data = output.squeeze().cpu().numpy()
+    audio_data = np.int16(audio_data / np.max(np.abs(audio_data)) * 32767)
+    wav_write(output_path, model.config.sampling_rate, audio_data)
 
 def main():
-    # Check if GPU is available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # Load the pre-trained models and processors
+    # Load models
     stt_model_name = "jonatasgrosman/wav2vec2-large-xlsr-53-polish"
     stt_model = Wav2Vec2ForCTC.from_pretrained(stt_model_name).to(device)
     stt_processor = Wav2Vec2Processor.from_pretrained(stt_model_name)
     
-    # Load the embeddings dataset
-    embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
-    speaker_embedding = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0).to(device)
-
-    # Load the TTS model and tokenizer
-    tts_model_name = "facebook/mms-tts-pol"
-    tts_model = VitsModel.from_pretrained(tts_model_name).to(device)
-    tts_tokenizer = AutoTokenizer.from_pretrained(tts_model_name)
+    tts_model_name = "microsoft/speecht5_tts"
+    tts_model = SpeechT5ForTextToSpeech.from_pretrained(tts_model_name).to(device)
+    tts_processor = SpeechT5Processor.from_pretrained(tts_model_name)
     
-    # Load the audio file
+    # Process audio
     input_file_path = "C:/Users/Krolik/Desktop/test_pl.wav"
     output_file_path = "C:/Users/Krolik/Desktop/anon.wav"
     waveform, sample_rate = load_audio(input_file_path)
     
-    # Get the original duration of the audio
-    original_duration = waveform.shape[-1] / sample_rate
+    if waveform is None:
+        print("Failed to load audio file")
+        return
     
-    # Transcribe the audio
+    speaker_embeddings = extract_speaker_embeddings(waveform, sample_rate, device)
+    if speaker_embeddings is None:
+        print("Failed to extract speaker embeddings")
+        return
+    
     transcription = transcribe_audio(waveform, sample_rate, stt_model, stt_processor, device)
     print(f"Transcription: {transcription}")
     
-    # Synthesize the anonymized speech
-    synthesize_speech(transcription, tts_model, tts_tokenizer, output_file_path, device)
+    synthesize_speech(transcription, tts_model, tts_processor, output_file_path, speaker_embeddings, device)
     print(f"Anonymized speech saved to {output_file_path}")
 
 if __name__ == "__main__":
