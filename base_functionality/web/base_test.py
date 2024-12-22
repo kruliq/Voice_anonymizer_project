@@ -212,8 +212,8 @@ def main():
     tts_tokenizer = AutoTokenizer.from_pretrained(tts_model_name)
     
     # Load the audio file
-    input_file_path = "C:/Users/Krolik/Desktop/test_pl.wav"
-    output_file_path = "C:/Users/Krolik/Desktop/anon.wav"
+    input_file_path = "base_functionality/web/uploads/test_pl.wav"
+    output_file_path = "base_functionality/web/uploads/test_pl_anon.wav"
     waveform, sample_rate = load_audio(input_file_path)
     
     # Get the original duration of the audio
