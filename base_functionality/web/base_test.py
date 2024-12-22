@@ -12,62 +12,34 @@ Main components:
 - Voice characteristic modification
 """
 
-import argparse
-import os
 import torchaudio
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor, VitsModel, AutoTokenizer
 import torch
 from scipy.io.wavfile import write as wav_write
 from datasets import load_dataset
 
-def parse_arguments():
-    """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='Voice anonymization system')
-    parser.add_argument('-i', '--input', type=str, required=True,
-                       help='Input audio file path')
-    parser.add_argument('-o', '--output', type=str, required=True,
-                       help='Output audio file path')
-    return parser.parse_args()
-
-def validate_paths(input_path: str, output_path: str) -> tuple[bool, str]:
-    """Validate input and output file paths."""
-    if not os.path.exists(input_path):
-        return False, f"Input file {input_path} does not exist"
-    
-    output_dir = os.path.dirname(output_path)
-    if output_dir and not os.path.exists(output_dir):
-        try:
-            os.makedirs(output_dir)
-        except OSError:
-            return False, f"Cannot create output directory {output_dir}"
-    
-    return True, ""
-
 def load_audio(file_path: str) -> tuple[torch.Tensor, int]:
     """
     Load an audio file and return the waveform and sample rate.
+
+    Args:
+        file_path: Path to the audio file to load
+
+    Returns:
+        tuple: (waveform, sample_rate)
+            - waveform: Audio waveform tensor of shape (channels, samples)
+            - sample_rate: Sampling rate of the audio in Hz
+
+    Example:
+        >>> waveform, sample_rate = load_audio("speech.wav")
+        >>> print(f"Audio duration: {waveform.shape[-1]/sample_rate:.2f}s")
     """
     try:
-        # Resolve absolute path
-        abs_path = os.path.abspath(file_path)
-        if not os.path.exists(abs_path):
-            raise FileNotFoundError(f"Audio file not found: {abs_path}")
-            
-        # Verify file is readable
-        if not os.access(abs_path, os.R_OK):
-            raise PermissionError(f"Cannot read audio file: {abs_path}")
-            
-        # Load audio using absolute path
-        waveform, sample_rate = torchaudio.load(abs_path)
-        
-        if waveform.shape[0] == 0 or sample_rate == 0:
-            raise ValueError("Invalid audio file: empty or corrupt")
-            
+        waveform, sample_rate = torchaudio.load(file_path)
         return waveform, sample_rate
-        
-    except Exception as e:
-        print(f"Error loading audio file {file_path}: {str(e)}")
-        raise
+    except RuntimeError as e:
+        print(f"Error loading audio file: {e}")
+        return None, None
 
 def transcribe_audio(waveform: torch.Tensor, 
                     sample_rate: int, 
@@ -221,15 +193,6 @@ def main():
     Example:
         >>> main()
     """
-    args = parse_arguments()
-    
-    # Validate paths
-    valid, error_msg = validate_paths(args.input, args.output)
-    if not valid:
-        print(f"Error: {error_msg}")
-        return 1
-    print(f"Input file: {args.input}")
-    print(f"Output file: {args.output}")
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -248,36 +211,32 @@ def main():
     tts_model = VitsModel.from_pretrained(tts_model_name).to(device)
     tts_tokenizer = AutoTokenizer.from_pretrained(tts_model_name)
     
-    try:
-        print(f"Attempting to load audio from: {args.input}")
-        waveform, sample_rate = load_audio(args.input)
-        if waveform is None or sample_rate is None:
-            raise ValueError("Failed to load audio file")
-            
-        # Get the original duration of the audio
-        original_duration = waveform.shape[-1] / sample_rate
-        # Transcribe the audio
-        transcription = transcribe_audio(waveform, sample_rate, stt_model, stt_processor, device)
-        print(f"Transcription: {transcription}")
-        
-        # Get input speech duration
-        input_duration = get_speech_duration(waveform, sample_rate)
-        print(f"Input duration: {input_duration:.2f}s")
-        
-        # Synthesize with matching duration
-        synthesize_speech(
-            transcription,
-            tts_model, 
-            tts_tokenizer,
-            args.output,
-            device,
-            target_duration=input_duration
-        )
-        print(f"Anonymized speech saved to {args.output}")
-        return 0
-    except Exception as e:
-        print(f"Error in main: {str(e)}")
-        return 1
+    # Load the audio file
+    input_file_path = "base_functionality/web/uploads/test_pl.wav"
+    output_file_path = "base_functionality/web/uploads/test_pl_anon.wav"
+    waveform, sample_rate = load_audio(input_file_path)
+    
+    # Get the original duration of the audio
+    original_duration = waveform.shape[-1] / sample_rate
+    
+    # Transcribe the audio
+    transcription = transcribe_audio(waveform, sample_rate, stt_model, stt_processor, device)
+    print(f"Transcription: {transcription}")
+    
+    # Get input speech duration
+    input_duration = get_speech_duration(waveform, sample_rate)
+    print(f"Input duration: {input_duration:.2f}s")
+    
+    # Synthesize with matching duration
+    synthesize_speech(
+        transcription,
+        tts_model, 
+        tts_tokenizer,
+        output_file_path,
+        device,
+        target_duration=input_duration
+    )
+    print(f"Anonymized speech saved to {output_file_path}")
 
 if __name__ == "__main__":
-    exit(main())
+    main()
