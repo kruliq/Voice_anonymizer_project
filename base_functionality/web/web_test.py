@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, send_from_directory
+from flask import Flask, request, render_template, send_from_directory, redirect, url_for, flash
 import os
 from werkzeug.utils import secure_filename
 
@@ -20,19 +20,22 @@ if not os.path.exists(UPLOAD_FOLDER):
 def upload_file():
     if request.method == 'POST':
         if 'file' not in request.files:
-            return 'No file part'
+            flash('No file part')
+            return redirect(url_for('upload_file'))
         file = request.files['file']
         if file.filename == '':
-            return 'No selected file'
+            flash('No selected file')
+            return redirect(url_for('upload_file'))
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
-            os.chmod(file_path, 0o644)  # Set proper file permissions
-            return 'File uploaded successfully'
-        return 'File type not allowed'
+            os.chmod(file_path, 0o644)
+            flash('File uploaded successfully')
+            return redirect(url_for('/'))
+        flash('File type not allowed')
+        return redirect(url_for('upload_file'))
     
-    # List uploaded files
     uploaded_files = os.listdir(app.config['UPLOAD_FOLDER'])
     return render_template('index.html', uploaded_files=uploaded_files)
 
