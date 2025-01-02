@@ -114,17 +114,48 @@
             color: #1565c0;
             text-align: center;
         }
+
+        .status-success {
+            color: green;
+            margin-top: 1rem;
+        }
+        .status-error {
+            color: red;
+            margin-top: 1rem;
+        }
+
+        .status-message {
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .status-message.visible {
+            display: block;
+        }
+
+        .status-success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="upload-section">
             <h1>Voice Anonymizer</h1>
-            <form action="/" method="post" enctype="multipart/form-data">
+            <form id="upload-form">
                 <label class="file-label" for="file-input">Choose File</label>
                 <input id="file-input" type="file" name="file">
                 <input type="submit" value="Upload">
             </form>
+            <div id="status-message"></div>
         </div>
         
         <div class="files-list">
@@ -155,6 +186,31 @@
             } else {
                 document.querySelector('.file-label').textContent = 'Choose File';
             }
+        });
+
+        function showMessage(message, status) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message visible status-${status}`;
+        }
+
+        function updateFilesList(files) {
+            const filesList = document.querySelector('.files-list ul');
+            filesList.innerHTML = files.map(file => 
+                `<li><a href="/uploads/${file}">${file}</a></li>`
+            ).join('');
+        }
+
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const response = await fetch('/', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            showMessage(data.message, data.status);
+            updateFilesList(data.files);
         });
     </script>
 </body>

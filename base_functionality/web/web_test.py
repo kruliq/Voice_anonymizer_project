@@ -12,6 +12,9 @@ ALLOWED_EXTENSIONS = {'wav'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def get_filtered_files():
+    return [f for f in os.listdir(UPLOAD_FOLDER) if f != '.gitignore']
+
 # Create uploads directory with proper permissions
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER, mode=0o755)
@@ -20,23 +23,19 @@ if not os.path.exists(UPLOAD_FOLDER):
 def upload_file():
     if request.method == 'POST':
         if 'file' not in request.files:
-            flash('No file part')
-            return redirect(url_for('upload_file'))
+            return {'status': 'error', 'message': 'No file part', 'files': get_filtered_files()}
         file = request.files['file']
         if file.filename == '':
-            flash('No selected file')
-            return redirect(url_for('upload_file'))
+            return {'status': 'error', 'message': 'No selected file', 'files': get_filtered_files()}
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             os.chmod(file_path, 0o644)
-            flash('File uploaded successfully')
-            return redirect(url_for('/'))
-        flash('File type not allowed')
-        return redirect(url_for('upload_file'))
+            return {'status': 'success', 'message': 'File uploaded successfully', 'files': get_filtered_files()}
+        return {'status': 'error', 'message': 'File type not allowed', 'files': get_filtered_files()}
     
-    uploaded_files = os.listdir(app.config['UPLOAD_FOLDER'])
+    uploaded_files = get_filtered_files()
     return render_template('index.html', uploaded_files=uploaded_files)
 
 @app.route('/uploads/<filename>')
