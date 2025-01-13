@@ -20,6 +20,12 @@ from datasets import load_dataset
 import getopt
 import sys
 
+import random
+from audiostretchy.stretch import stretch_audio
+import librosa
+from scipy.io.wavfile import read  
+from scipy.io.wavfile import write as write_wav
+
 import time
 
 
@@ -110,6 +116,7 @@ def get_speech_duration(waveform: torch.Tensor,
 def normalize_length(waveform: torch.Tensor, 
                     target_length: int, 
                     sample_rate: int) -> torch.Tensor:
+    sr1 = sample_rate
     """
     Adjust waveform length without changing pitch using resampling.
     
@@ -171,19 +178,39 @@ def synthesize_speech(text: str,
         audio = output.squeeze().cpu()
     
     # Match duration if specified
-    if target_duration is not None:
+    """    if target_duration is not None:
         target_samples = int(target_duration * model.config.sampling_rate)
         audio = normalize_length(
             audio, 
             target_samples,
             model.config.sampling_rate
         )
+    """
+    
+    audio_to_stretch = (audio * 32767).numpy().astype('int16')
+    write_wav("uploads/for_stretch.wav", 16000, audio_to_stretch)
+    
+    
+    #stretching
+    stretch_audio("base_functionality/web/uploads/for_stretch.wav", "base_functionality/web/uploads/stretched.wav", ratio=1.5)
+    #wczytanie do pitch shiftingu
+    audio, sr1 = librosa.load("base_functionality/web/uploads/stretched.wav", sr=16000)
+    #pitch shifting
+    steps = -4 #0.1*random.choice([round(x, 1) for x in range(0, -40, -1)])
+    print(steps)
+    audio_stretched_pitched = librosa.effects.pitch_shift(audio, sr=sr1, n_steps=steps)
+    #zapis do .wav
+    write_wav("base_functionality/web/uploads/pitched.wav", sr1, audio_stretched_pitched)
+    
+    audio_to_save, sr = librosa.load("base_functionality/web/uploads/pitched.wav", sr=16000)
+    
+    print("are we good or cooked chat?")
     
     # Save the synthesized speech
     wav_write(
         output_path, 
         rate=model.config.sampling_rate,
-        data=(audio * 32767).numpy().astype('int16')
+        data=audio_to_save
     )
 
 def main():
