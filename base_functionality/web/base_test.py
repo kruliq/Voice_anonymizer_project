@@ -125,7 +125,7 @@ def normalize_length(waveform: torch.Tensor,
     current_length = waveform.shape[-1]
     if current_length == target_length:
         return waveform
-    return waveform  
+    #return waveform  
     # Calculate new sampling rate for time stretching
     stretch_factor = target_length / current_length
     new_sample_rate = int(sample_rate * stretch_factor)
@@ -269,5 +269,12 @@ def main():
     )
     print(f"Anonymized speech saved to {output_file}")
 
+
+import time
+
+
 if __name__ == "__main__":
+    start = time.time()
     main()
+    end = time.time()
+    print(f"Working time: {end - start:.6f} seconds")
