@@ -17,6 +17,8 @@ from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor, VitsModel, AutoToken
 import torch
 from scipy.io.wavfile import write as wav_write
 from datasets import load_dataset
+import getopt
+import sys
 
 def load_audio(file_path: str) -> tuple[torch.Tensor, int]:
     """
@@ -123,7 +125,7 @@ def normalize_length(waveform: torch.Tensor,
     current_length = waveform.shape[-1]
     if current_length == target_length:
         return waveform
-        
+    return waveform  
     # Calculate new sampling rate for time stretching
     stretch_factor = target_length / current_length
     new_sample_rate = int(sample_rate * stretch_factor)
@@ -193,6 +195,37 @@ def main():
     Example:
         >>> main()
     """
+    # Remove the first argument from the list of command line arguments
+    argument_list = sys.argv[1:]
+
+    # Options
+    options = "i:o:"
+
+    # Long options
+    long_options = ["input=", "output="]
+
+    input_file = "base_functionality/web/uploads/test_pl.wav"
+    output_file = "base_functionality/web/uploads/test_pl_anon.wav"
+
+    try:
+        # Parsing argument
+        arguments, values = getopt.getopt(argument_list, options, long_options)
+        
+        # Checking each argument
+        for current_argument, current_value in arguments:
+            if current_argument in ("-i", "--input"):
+                input_file = current_value
+            elif current_argument in ("-o", "--output"):
+                output_file = current_value
+
+        print(f"Input file: {input_file}")
+        print(f"Output file: {output_file}")
+
+    except getopt.error as err:
+        # Output error, and return with an error code
+        print(str(err))
+        return
+
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -212,9 +245,7 @@ def main():
     tts_tokenizer = AutoTokenizer.from_pretrained(tts_model_name)
     
     # Load the audio file
-    input_file_path = "base_functionality/web/uploads/test_pl.wav"
-    output_file_path = "base_functionality/web/uploads/test_pl_anon.wav"
-    waveform, sample_rate = load_audio(input_file_path)
+    waveform, sample_rate = load_audio(input_file)
     
     # Get the original duration of the audio
     original_duration = waveform.shape[-1] / sample_rate
@@ -232,11 +263,11 @@ def main():
         transcription,
         tts_model, 
         tts_tokenizer,
-        output_file_path,
+        output_file,
         device,
         target_duration=input_duration
     )
-    print(f"Anonymized speech saved to {output_file_path}")
+    print(f"Anonymized speech saved to {output_file}")
 
 if __name__ == "__main__":
     main()

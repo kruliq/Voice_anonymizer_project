@@ -2,19 +2,216 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>File Upload</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Anonymizer</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --background-color: #f5f5f5;
+            --text-color: #333;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .upload-section {
+            width: 100%;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: var(--primary-color);
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-label {
+            padding: 0.8rem 1.5rem;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .file-label:hover {
+            background: #357abd;
+        }
+
+        input[type="submit"] {
+            padding: 0.8rem 2rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        input[type="submit"]:hover {
+            background: #357abd;
+        }
+
+        .files-list {
+            width: 100%;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 0.5rem 0;
+        }
+
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .flash-message {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+            background-color: #e3f2fd;
+            color: #1565c0;
+            text-align: center;
+        }
+
+        .status-success {
+            color: green;
+            margin-top: 1rem;
+        }
+        .status-error {
+            color: red;
+            margin-top: 1rem;
+        }
+
+        .status-message {
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .status-message.visible {
+            display: block;
+        }
+
+        .status-success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+    </style>
 </head>
 <body>
-    <h1>Upload a File</h1>
-    <form action="/" method="post" enctype="multipart/form-data">
-        <input type="file" name="file">
-        <input type="submit" value="Upload">
-    </form>
-    <h2>Uploaded Files</h2>
-    <ul>
-        {% for file in uploaded_files %}
-            <li><a href="{{ url_for('uploaded_file', filename=file) }}">{{ file }}</a></li>
-        {% endfor %}
-    </ul>
+    <div class="container">
+        <div class="upload-section">
+            <h1>Voice Anonymizer</h1>
+            <form id="upload-form">
+                <label class="file-label" for="file-input">Choose File</label>
+                <input id="file-input" type="file" name="file">
+                <input type="submit" value="Upload">
+            </form>
+            <div id="status-message"></div>
+        </div>
+        
+        <div class="files-list">
+            <h2>Uploaded Files</h2>
+            <ul>
+                {% for file in uploaded_files %}
+                    <li><a href="{{ url_for('uploaded_file', filename=file) }}">{{ file }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="flash-message">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <script>
+        document.getElementById('file-input').addEventListener('change', function() {
+            const fileName = this.files[0]?.name;
+            if (fileName) {
+                document.querySelector('.file-label').textContent = fileName;
+            } else {
+                document.querySelector('.file-label').textContent = 'Choose File';
+            }
+        });
+
+        function showMessage(message, status) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message visible status-${status}`;
+        }
+
+        function updateFilesList(files) {
+            const filesList = document.querySelector('.files-list ul');
+            filesList.innerHTML = files.map(file => 
+                `<li><a href="/uploads/${file}">${file}</a></li>`
+            ).join('');
+        }
+
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const response = await fetch('/', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            showMessage(data.message, data.status);
+            updateFilesList(data.files);
+        });
+    </script>
 </body>
 </html>
