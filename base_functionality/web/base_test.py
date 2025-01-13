@@ -192,7 +192,7 @@ def synthesize_speech(text: str,
     
     
     #stretching
-    stretch_audio("base_functionality/web/uploads/for_stretch.wav", "base_functionality/web/uploads/stretched.wav", ratio=1.5)
+    stretch_audio("uploads/for_stretch.wav", "uploads/stretched.wav", ratio=1.5)
     #wczytanie do pitch shiftingu
     audio, sr1 = librosa.load("base_functionality/web/uploads/stretched.wav", sr=16000)
     #pitch shifting
