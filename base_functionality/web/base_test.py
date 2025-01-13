@@ -20,6 +20,9 @@ from datasets import load_dataset
 import getopt
 import sys
 
+import time
+
+
 def load_audio(file_path: str) -> tuple[torch.Tensor, int]:
     """
     Load an audio file and return the waveform and sample rate.
@@ -195,6 +198,8 @@ def main():
     Example:
         >>> main()
     """
+    start = time.time()
+    
     # Remove the first argument from the list of command line arguments
     argument_list = sys.argv[1:]
 
@@ -268,13 +273,13 @@ def main():
         target_duration=input_duration
     )
     print(f"Anonymized speech saved to {output_file}")
-
-
-import time
-
+    
+    end = time.time()
+    time_diff = end - start
+    print(f"Working time: {time_diff:.6f}s")
+    RTF = time_diff/input_duration
+    print(f"RealTimeFactor: {RTF:.6f}")
+    print(input_duration, time_diff, RTF, sep='\t')
 
 if __name__ == "__main__":
-    start = time.time()
     main()
-    end = time.time()
-    print(f"Working time: {end - start:.6f} seconds")
