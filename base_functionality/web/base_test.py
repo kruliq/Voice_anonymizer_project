@@ -244,7 +244,7 @@ def main():
     
     # Load the embeddings dataset
     embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
-    speaker_embedding = torch.tensor(embeddings_dataset[10000]["xvector"]).unsqueeze(0).to(device)
+    speaker_embedding = torch.tensor(embeddings_dataset[7073]["xvector"]).unsqueeze(0).to(device)
 
     # Load the TTS model and tokenizer
     tts_model_name = "facebook/mms-tts-pol"
