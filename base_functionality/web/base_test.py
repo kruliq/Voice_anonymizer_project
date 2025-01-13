@@ -189,30 +189,29 @@ def synthesize_speech(text: str,
     
     audio_to_stretch = (audio * 32767).numpy().astype('int16')
     write_wav("uploads/for_stretch.wav", 16000, audio_to_stretch)
-    
-    
+
     #stretching
     stretch_audio("uploads/for_stretch.wav", "uploads/stretched.wav", ratio=0.8)
     #wczytanie do pitch shiftingu
     audio, sr1 = librosa.load("uploads/stretched.wav", sr=16000)
     #pitch shifting
-    steps = -2 #0.1*random.choice([round(x, 1) for x in range(0, -40, -1)])
+    steps = 0 #0.1*random.choice([round(x, 1) for x in range(0, -40, -1)])
     print(steps, " what ")
     audio_stretched_pitched = librosa.effects.pitch_shift(audio, sr=sr1, n_steps=steps)
     #zapis do .wav
     write_wav("uploads/pitched.wav", sr1, audio_stretched_pitched)
-    
+
     audio_to_save, sr = librosa.load("uploads/pitched.wav", sr=16000)
-    
+
     print("are we good or cooked chat?")
-    
-    # Save the synthesized speech
+
+    #save the synthesized speech
     wav_write(
         output_path, 
         rate=model.config.sampling_rate,
         data=audio_to_save
     )
-
+    
 def main():
     """
     Main function to run the voice anonymization system.
