@@ -194,15 +194,15 @@ def synthesize_speech(text: str,
     #stretching
     stretch_audio("uploads/for_stretch.wav", "uploads/stretched.wav", ratio=1.5)
     #wczytanie do pitch shiftingu
-    audio, sr1 = librosa.load("base_functionality/web/uploads/stretched.wav", sr=16000)
+    audio, sr1 = librosa.load("uploads/stretched.wav", sr=16000)
     #pitch shifting
     steps = -4 #0.1*random.choice([round(x, 1) for x in range(0, -40, -1)])
     print(steps)
     audio_stretched_pitched = librosa.effects.pitch_shift(audio, sr=sr1, n_steps=steps)
     #zapis do .wav
-    write_wav("base_functionality/web/uploads/pitched.wav", sr1, audio_stretched_pitched)
+    write_wav("uploads/pitched.wav", sr1, audio_stretched_pitched)
     
-    audio_to_save, sr = librosa.load("base_functionality/web/uploads/pitched.wav", sr=16000)
+    audio_to_save, sr = librosa.load("uploads/pitched.wav", sr=16000)
     
     print("are we good or cooked chat?")
     
