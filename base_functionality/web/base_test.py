@@ -192,12 +192,12 @@ def synthesize_speech(text: str,
     
     
     #stretching
-    stretch_audio("uploads/for_stretch.wav", "uploads/stretched.wav", ratio=1.5)
+    stretch_audio("uploads/for_stretch.wav", "uploads/stretched.wav", ratio=0.8)
     #wczytanie do pitch shiftingu
     audio, sr1 = librosa.load("uploads/stretched.wav", sr=16000)
     #pitch shifting
-    steps = -4 #0.1*random.choice([round(x, 1) for x in range(0, -40, -1)])
-    print(steps)
+    steps = -2 #0.1*random.choice([round(x, 1) for x in range(0, -40, -1)])
+    print(steps, " what ")
     audio_stretched_pitched = librosa.effects.pitch_shift(audio, sr=sr1, n_steps=steps)
     #zapis do .wav
     write_wav("uploads/pitched.wav", sr1, audio_stretched_pitched)
