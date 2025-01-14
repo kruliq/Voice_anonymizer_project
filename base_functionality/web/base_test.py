@@ -27,6 +27,7 @@ from scipy.io.wavfile import read
 from scipy.io.wavfile import write as write_wav
 
 import time
+import os
 
 
 def load_audio(file_path: str) -> tuple[torch.Tensor, int]:
@@ -149,6 +150,50 @@ def normalize_length(waveform: torch.Tensor,
     return resampler(waveform)
     """
 
+def process_audio(audio_input, stretch_ratio=0.8, pitch_steps=0, sample_rate=16000):
+    """
+    Process audio with stretching and pitch shifting.
+    
+    Args:
+        audio_input: Input audio array
+        stretch_ratio: Time stretching ratio (default: 0.8)
+        pitch_steps: Number of steps for pitch shifting (default: 0)
+        sample_rate: Audio sample rate (default: 16000)
+    
+    Returns:
+        processed_audio: Processed audio array
+    """
+    try:
+        # Convert audio to int16
+        audio_to_stretch = (audio_input * 32767).numpy().astype('int16')
+        
+        # Create temporary file for stretching
+        temp_file = "uploads/temp_process.wav"
+        write_wav(temp_file, sample_rate, audio_to_stretch)
+        
+        # Apply time stretching
+        stretch_audio(temp_file, temp_file, ratio=stretch_ratio)
+        
+        # Load stretched audio for pitch shifting
+        audio_stretched, sr = librosa.load(temp_file, sr=sample_rate)
+        
+        # Apply pitch shifting
+        processed_audio = librosa.effects.pitch_shift(
+            audio_stretched, 
+            sr=sr, 
+            n_steps=pitch_steps
+        )
+        
+        return processed_audio
+        
+    except Exception as e:
+        print(f"Error processing audio: {str(e)}")
+        return None
+    finally:
+        # Cleanup temporary files
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
+
 def synthesize_speech(text: str, 
                      model: VitsModel, 
                      tokenizer: AutoTokenizer, 
@@ -177,40 +222,21 @@ def synthesize_speech(text: str,
         output = model(**inputs).waveform
         audio = output.squeeze().cpu()
     
-    # Match duration if specified
-    """    if target_duration is not None:
-        target_samples = int(target_duration * model.config.sampling_rate)
-        audio = normalize_length(
-            audio, 
-            target_samples,
-            model.config.sampling_rate
-        )
-    """
-    
-    audio_to_stretch = (audio * 32767).numpy().astype('int16')
-    write_wav("uploads/for_stretch.wav", 16000, audio_to_stretch)
-
-    #stretching
-    stretch_audio("uploads/for_stretch.wav", "uploads/stretched.wav", ratio=0.8)
-    #wczytanie do pitch shiftingu
-    audio, sr1 = librosa.load("uploads/stretched.wav", sr=16000)
-    #pitch shifting
-    steps = 0 #0.1*random.choice([round(x, 1) for x in range(0, -40, -1)])
-    print(steps, " what ")
-    audio_stretched_pitched = librosa.effects.pitch_shift(audio, sr=sr1, n_steps=steps)
-    #zapis do .wav
-    write_wav("uploads/pitched.wav", sr1, audio_stretched_pitched)
-
-    audio_to_save, sr = librosa.load("uploads/pitched.wav", sr=16000)
-
-    print("are we good or cooked chat?")
-
-    #save the synthesized speech
-    wav_write(
-        output_path, 
-        rate=model.config.sampling_rate,
-        data=audio_to_save
+    # Process audio with stretching and pitch shifting
+    processed_audio = process_audio(
+        audio,
+        stretch_ratio=0.8,
+        pitch_steps=0,
+        sample_rate=16000
     )
+    
+    if processed_audio is not None:
+        # Save the synthesized speech
+        wav_write(
+            output_path,
+            rate=model.config.sampling_rate,
+            data=processed_audio
+        )
     
 def main():
     """
