@@ -24,7 +24,7 @@ import random
 from audiostretchy.stretch import stretch_audio
 import librosa
 from scipy.io.wavfile import read  
-from scipy.io.wavfile import write as write_wav
+
 
 import time
 import os
@@ -168,9 +168,10 @@ def process_audio(audio_input, stretch_ratio=0.8, pitch_steps=0, sample_rate=160
         audio_to_stretch = (audio_input * 32767).numpy().astype('int16')
         
         # Create temporary file for stretching
-        temp_file = "uploads/temp_process.wav"
-        write_wav(temp_file, sample_rate, audio_to_stretch)
-        
+        temp_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads/temp_process.wav')
+        wav_write(temp_file, sample_rate, audio_to_stretch)
+        os.chmod(temp_file, 0o644)
+        print("stretch_ratio: ", stretch_ratio)
         # Apply time stretching
         stretch_audio(temp_file, temp_file, ratio=stretch_ratio)
         
@@ -221,11 +222,13 @@ def synthesize_speech(text: str,
     with torch.no_grad():
         output = model(**inputs).waveform
         audio = output.squeeze().cpu()
-    
+    audio_length_seconds = audio.shape[-1] / model.config.sampling_rate
+    stretch_factor = target_duration / audio_length_seconds
+    print("target_duration: ", target_duration, "audio_length_seconds: ", audio_length_seconds, "stretch_factor: ", stretch_factor)
     # Process audio with stretching and pitch shifting
     processed_audio = process_audio(
         audio,
-        stretch_ratio=0.8,
+        stretch_ratio=stretch_factor,
         pitch_steps=0,
         sample_rate=16000
     )
@@ -324,7 +327,7 @@ def main():
         tts_tokenizer,
         output_file,
         device,
-        target_duration=input_duration
+        target_duration=original_duration
     )
     print(f"Anonymized speech saved to {output_file}")
     
