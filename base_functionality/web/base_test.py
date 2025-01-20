@@ -288,6 +288,7 @@ def main():
         print(str(err))
         return
 
+    load_start = time.time()
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -308,6 +309,11 @@ def main():
     
     # Load the audio file
     waveform, sample_rate = load_audio(input_file)
+       
+    load_end = time.time()
+    print('Models loading time: ', load_end-load_start, 's')
+
+   
     
     # Get the original duration of the audio
     original_duration = waveform.shape[-1] / sample_rate
