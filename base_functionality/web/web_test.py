@@ -49,22 +49,43 @@ def upload_file():
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             os.chmod(file_path, 0o644)
-            # Run the external script
-            output_file = os.path.join(app.config['PROCESSED_FOLDER'], f"{filename.rsplit('.', 1)[0]}_anon.wav")
-            process = subprocess.Popen(
-                ['python3', '/home/tm_user/Voice_anonymizer_project/base_functionality/web/base_test.py', '-i', file_path, '-o', output_file],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-            stdout, stderr = process.communicate()
-            if process.returncode == 0:
-                return jsonify({'status': 'success', 'message': stdout.decode('utf-8'), 'files': get_filtered_files()})
-            else:
-                return jsonify({'status': 'error', 'message': stderr.decode('utf-8'), 'files': get_filtered_files()})
-        return jsonify({'status': 'error', 'message': 'File type not allowed', 'files': get_filtered_files()})
+            
+            # Return processing status
+            return jsonify({
+                'status': 'success',
+                'message': f'Processing file {filename}...',
+                'filename': filename,
+                'files': get_filtered_files()
+            })
     
     uploaded_files = get_filtered_files()
     return render_template('index.html', uploaded_files=uploaded_files)
+
+@app.route('/process/<filename>', methods=['POST'])
+def process_file(filename):
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    output_file = os.path.join(app.config['PROCESSED_FOLDER'], f"{filename.rsplit('.', 1)[0]}_anon.wav")
+    
+    process = subprocess.Popen(
+        ['python3', '/home/tm_user/Voice_anonymizer_project/base_functionality/web/base_test.py', 
+         '-i', file_path, '-o', output_file],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+    stdout, stderr = process.communicate()
+    
+    if process.returncode == 0:
+        return jsonify({
+            'status': 'success',
+            'message': 'File processed successfully!',
+            'files': get_filtered_files()
+        })
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': stderr.decode('utf-8'),
+            'files': get_filtered_files()
+        })
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
