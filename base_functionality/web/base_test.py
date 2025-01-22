@@ -318,7 +318,7 @@ def main():
     
     # Get input speech duration
     input_duration = get_speech_duration(waveform, sample_rate)
-    print(f"Input duration: {input_duration:.2f}s")
+    #print(f"Input duration: {input_duration:.2f}s")
     
     # Synthesize with matching duration
     synthesize_speech(
@@ -333,7 +333,7 @@ def main():
     
     end = time.time()
     time_diff = end - start
-    #print(f"Working time: {time_diff:.6f}s")
+    print(f"Working time: {time_diff:.6f}s")
     RTF = time_diff/input_duration
     #print(f"RealTimeFactor: {RTF:.6f}")
     #print(input_duration, time_diff, RTF, sep='\t')
