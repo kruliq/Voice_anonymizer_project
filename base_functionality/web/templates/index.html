@@ -119,6 +119,10 @@
             color: green;
             margin-top: 1rem;
         }
+        .status-processing {
+            color: green;
+            margin-top: 1rem;
+        }
         .status-error {
             color: red;
             margin-top: 1rem;
@@ -136,6 +140,10 @@
         }
 
         .status-success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status-processing {
             background-color: #e8f5e9;
             color: #2e7d32;
         }
@@ -159,7 +167,7 @@
         </div>
         
         <div class="files-list">
-            <h2>Uploaded Files</h2>
+            <h2>Anonymized Files</h2>
             <ul>
                 {% for file in uploaded_files %}
                     <li><a href="{{ url_for('uploaded_file', filename=file) }}">{{ file }}</a></li>

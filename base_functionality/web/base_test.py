@@ -280,8 +280,8 @@ def main():
             elif current_argument in ("-o", "--output"):
                 output_file = current_value
 
-        print(f"Input file: {input_file}")
-        print(f"Output file: {output_file}")
+        #print(f"Input file: {input_file}")
+        #print(f"Output file: {output_file}")
 
     except getopt.error as err:
         # Output error, and return with an error code
@@ -291,7 +291,7 @@ def main():
     load_start = time.time()
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
+    #print(f"Using device: {device}")
 
     # Load models
     stt_model_name = "jonatasgrosman/wav2vec2-large-xlsr-53-polish"
@@ -311,7 +311,7 @@ def main():
     waveform, sample_rate = load_audio(input_file)
        
     load_end = time.time()
-    print('Models loading time: ', load_end-load_start, 's')
+    #print('Models loading time: ', load_end-load_start, 's')
 
    
     

@@ -49,10 +49,10 @@ def upload_file():
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             os.chmod(file_path, 0o644)
-            
+            print(f"File {filename} uploaded successfully!")
             # Return processing status
             return jsonify({
-                'status': 'success',
+                'status': 'processing',
                 'message': f'Processing file {filename}...',
                 'filename': filename,
                 'files': get_filtered_files()
@@ -65,7 +65,7 @@ def upload_file():
 def process_file(filename):
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     output_file = os.path.join(app.config['PROCESSED_FOLDER'], f"{filename.rsplit('.', 1)[0]}_anon.wav")
-    
+    print(f"Processing {file_path} to {output_file}...")
     process = subprocess.Popen(
         ['python3', '/home/tm_user/Voice_anonymizer_project/base_functionality/web/base_test.py', 
          '-i', file_path, '-o', output_file],
