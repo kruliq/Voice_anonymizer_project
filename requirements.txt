@@ -7,3 +7,7 @@ python-dotenv==0.20.0
 transformers
 scipy
 datasets
+torchaudio
+torch
+librosa
+audiostretchy
