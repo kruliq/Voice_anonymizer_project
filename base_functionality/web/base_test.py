@@ -171,7 +171,7 @@ def process_audio(audio_input, stretch_ratio=0.8, pitch_steps=0, sample_rate=160
         temp_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads/temp_process.wav')
         wav_write(temp_file, sample_rate, audio_to_stretch)
         os.chmod(temp_file, 0o644)
-        print("stretch_ratio: ", stretch_ratio)
+        #print("stretch_ratio: ", stretch_ratio)
         # Apply time stretching
         stretch_audio(temp_file, temp_file, ratio=stretch_ratio)
         
@@ -224,7 +224,7 @@ def synthesize_speech(text: str,
         audio = output.squeeze().cpu()
     audio_length_seconds = audio.shape[-1] / model.config.sampling_rate
     stretch_factor = target_duration / audio_length_seconds
-    print("target_duration: ", target_duration, "audio_length_seconds: ", audio_length_seconds, "stretch_factor: ", stretch_factor)
+    #print("target_duration: ", target_duration, "audio_length_seconds: ", audio_length_seconds, "stretch_factor: ", stretch_factor)
     # Process audio with stretching and pitch shifting
     processed_audio = process_audio(
         audio,
@@ -280,8 +280,8 @@ def main():
             elif current_argument in ("-o", "--output"):
                 output_file = current_value
 
-        print(f"Input file: {input_file}")
-        print(f"Output file: {output_file}")
+        #print(f"Input file: {input_file}")
+        #print(f"Output file: {output_file}")
 
     except getopt.error as err:
         # Output error, and return with an error code
@@ -290,7 +290,7 @@ def main():
 
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
+    #print(f"Using device: {device}")
 
     # Load models
     stt_model_name = "jonatasgrosman/wav2vec2-large-xlsr-53-polish"
@@ -329,14 +329,14 @@ def main():
         device,
         target_duration=original_duration
     )
-    print(f"Anonymized speech saved to {output_file}")
+    #print(f"Anonymized speech saved to {output_file}")
     
     end = time.time()
     time_diff = end - start
-    print(f"Working time: {time_diff:.6f}s")
+    #print(f"Working time: {time_diff:.6f}s")
     RTF = time_diff/input_duration
-    print(f"RealTimeFactor: {RTF:.6f}")
-    print(input_duration, time_diff, RTF, sep='\t')
+    #print(f"RealTimeFactor: {RTF:.6f}")
+    #print(input_duration, time_diff, RTF, sep='\t')
 
 if __name__ == "__main__":
     main()
