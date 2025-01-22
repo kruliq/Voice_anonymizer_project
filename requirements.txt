@@ -11,3 +11,5 @@ torchaudio
 torch
 librosa
 audiostretchy
+soundfile
+wavefile
