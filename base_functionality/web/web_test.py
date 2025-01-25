@@ -67,7 +67,7 @@ def process_file(filename):
     output_file = os.path.join(app.config['PROCESSED_FOLDER'], f"{filename.rsplit('.', 1)[0]}_anon.wav")
     print(f"Processing {file_path} to {output_file}...")
     process = subprocess.Popen(
-        ['python3', '/home/tm_user/Voice_anonymizer_project/base_functionality/web/base_test.py', 
+        ['python3', '/app/base_functionality/web/base_test.py', 
          '-i', file_path, '-o', output_file],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
@@ -89,7 +89,13 @@ def process_file(filename):
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], secure_filename(filename))
+    file_path = os.path.join(app.config['PROCESSED_FOLDER'], secure_filename(filename))
+    print(f"Trying to send file: {file_path}")
+    if os.path.exists(file_path):
+        return send_from_directory(app.config['PROCESSED_FOLDER'], secure_filename(filename))
+    else:
+        print(f"File not found: {file_path}")
+        return "File not found", 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

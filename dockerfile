@@ -17,6 +17,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the project files
 COPY base_functionality/ ./base_functionality/
+COPY Speech_to_text_demo/ ./Speech_to_text_demo/
+COPY tests/ ./tests/
 COPY LICENSE README.md ./
 
 # Create necessary directories
