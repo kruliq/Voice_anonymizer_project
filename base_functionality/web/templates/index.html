@@ -119,6 +119,10 @@
             color: green;
             margin-top: 1rem;
         }
+        .status-processing {
+            color: green;
+            margin-top: 1rem;
+        }
         .status-error {
             color: red;
             margin-top: 1rem;
@@ -136,6 +140,10 @@
         }
 
         .status-success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status-processing {
             background-color: #e8f5e9;
             color: #2e7d32;
         }
@@ -159,7 +167,7 @@
         </div>
         
         <div class="files-list">
-            <h2>Uploaded Files</h2>
+            <h2>Anonymized Files</h2>
             <ul>
                 {% for file in uploaded_files %}
                     <li><a href="{{ url_for('uploaded_file', filename=file) }}">{{ file }}</a></li>
@@ -188,6 +196,32 @@
             }
         });
 
+        function uploadFile() {
+            const formData = new FormData(document.getElementById('upload-form'));
+            
+            fetch('/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'processing') {
+                    showMessage(data.message, data.status);
+                    // Start processing
+                    fetch(`/process/${data.filename}`, {
+                        method: 'POST'
+                    })
+                    .then(response => response.json())
+                    .then(processData => {
+                        showMessage(processData.message, processData.status);
+                        updateFilesList(processData.files);
+                    });
+                } else {
+                    showMessage(data.message, data.status);
+                }
+            });
+        }
+
         function showMessage(message, status) {
             const statusDiv = document.getElementById('status-message');
             statusDiv.textContent = message;
@@ -201,16 +235,9 @@
             ).join('');
         }
 
-        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+        document.getElementById('upload-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            const formData = new FormData(e.target);
-            const response = await fetch('/', {
-                method: 'POST',
-                body: formData
-            });
-            const data = await response.json();
-            showMessage(data.message, data.status);
-            updateFilesList(data.files);
+            uploadFile();
         });
     </script>
 </body>
